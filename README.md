@@ -3,11 +3,16 @@ spring-boot-starter-druid
 配置示例
 ```
 #DRUID
-druid:
-    url: jdbc:mysql://localhost:3306/springboottest
-    driver-class: com.mysql.jdbc.Driver
-    username: root
-    password: OZo+t9QET+ctzd5Esn9q0GJP5hXtWWIKEsX8c4/w6z4C4AnxrwpvySNgBS89XdazOavjXXZp0oeZtQ3P9lLGEA==
+spring:  
+  druid:
+    driver-class: com.mysql.cj.jdbc.Driver
+    list: 
+      - url: jdbc:mysql://localhost:3306/sys?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&useSSL=false
+        username: root
+        password: root
+      - url: jdbc:mysql://localhost:3306/sys?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&useSSL=false
+        username: root
+        password: root
     initial-size: 1
     min-idle: 1
     max-active: 20
@@ -20,14 +25,14 @@ druid:
     test-on-return: false
     pool-prepared-statements: false
     max-pool-prepared-statement-per-connection-size: 20
-    filters: stat,wall,log4j,config
-    connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000;config.decrypt=true
+    #filters: stat,wall,log4j,config
+    connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000;config.decrypt=true    
     monitor:
           enabled: enabled # 配置此属性Monitor才生效
           druid-stat-view: /druid/*
           druid-web-stat-filter: /*
-          allow: 219.230.50.107,127.0.0.1
-          deny: 219.230.50.108
+          allow: 127.0.0.1
+          #deny: 
           login-username: admin
           login-password: 123456
           exclusions: '*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*'
@@ -38,4 +43,43 @@ druid:
 
 `druid.monitor.enabled=enabled` 时Monitor才生效
 
-配置就不讲了,不懂的自己`Google`去
+本例开发支持一主多从配置，通过切面实现读写分离，基于mybatis3.0的annotation化mapper，以下是测试环境的mybatis配置，供参考：
+
+@Configuration
+@EnableAutoConfiguration
+@AutoConfigureAfter({DruidAutoConfiguration.class})
+@MapperScan(basePackages = "com.viching.test.mapper")
+@EnableTransactionManagement
+public class MybatisConfig implements TransactionManagementConfigurer {
+	
+    @Resource(name="dynamicDataSource")
+    private DataSource dataSource;
+
+    @Override
+    public PlatformTransactionManager annotationDrivenTransactionManager() {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean(name = "sqlSessionFactory")
+    @ConditionalOnMissingBean
+    public SqlSessionFactory sqlSessionFactoryBean() {
+        SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+        bean.setDataSource(dataSource);
+        
+        Properties sqlSessionFactoryProperties = new Properties();
+        sqlSessionFactoryProperties.setProperty("dialect", "mysql");
+        bean.setConfigurationProperties(sqlSessionFactoryProperties);
+        
+        try {
+            return bean.getObject();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Bean
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        return new SqlSessionTemplate(sqlSessionFactory);
+    }
+}
