@@ -1,10 +1,15 @@
 package com.viching.druid.configuration;
 
+import java.lang.reflect.Method;
+
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -22,12 +27,10 @@ import org.springframework.stereotype.Component;
 public class DynamicDataSourceAspect {
     private static final Logger logger = LoggerFactory.getLogger(DynamicDataSourceAspect.class);
 
-    private final String[] QUERY_PREFIX = {"select", "query", "find", "get"};
-
     /**
      * Dao aspect.
      */
-    @Pointcut("execution( * com.viching.test.mapper.*.*(..))")
+    @Pointcut("@within(org.apache.ibatis.annotations.Mapper)")
     public void daoAspect() {
     }
 
@@ -38,7 +41,7 @@ public class DynamicDataSourceAspect {
      */
     @Before("daoAspect()")
     public void switchDataSource(JoinPoint point) {
-        Boolean isQueryMethod = isQueryMethod(point.getSignature().getName());
+        Boolean isQueryMethod = isQueryMethod(point);
         if (isQueryMethod) {
             DynamicDataSourceContextHolder.useSlaveDataSource();
         }else{
@@ -67,11 +70,17 @@ public class DynamicDataSourceAspect {
      * @param methodName
      * @return
      */
-    private Boolean isQueryMethod(String methodName) {
-        for (String prefix : QUERY_PREFIX) {
-            if (methodName.startsWith(prefix)) {
-                return true;
-            }
+    private Boolean isQueryMethod(JoinPoint point) {
+        MethodSignature signature = (MethodSignature) point.getSignature();
+        Method method = signature.getMethod();
+        Object obj = null;
+        obj = method.getAnnotation(Select.class);
+        if (obj != null) {
+            return true;
+        }
+        obj = method.getAnnotation(SelectProvider.class);
+        if (obj != null) {
+            return true;
         }
         return false;
     }
