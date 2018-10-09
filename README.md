@@ -48,8 +48,10 @@ spring:
 @Configuration
 @EnableAutoConfiguration
 @AutoConfigureAfter({DruidAutoConfiguration.class})
+@ConditionalOnBean(DataSource.class)
 @MapperScan(basePackages = "com.viching.test.mapper")
 @EnableTransactionManagement
+
 public class MybatisConfig implements TransactionManagementConfigurer {
 	
     @Resource(name="dynamicDataSource")
