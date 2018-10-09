@@ -65,6 +65,7 @@ public class MybatisConfig implements TransactionManagementConfigurer {
     public SqlSessionFactory sqlSessionFactoryBean() {
         SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
         bean.setDataSource(dataSource);
+        bean.setVfs(SpringBootVFS.class);
         
         Properties sqlSessionFactoryProperties = new Properties();
         sqlSessionFactoryProperties.setProperty("dialect", "mysql");

@@ -73,13 +73,7 @@ public class DynamicDataSourceAspect {
     private Boolean isQueryMethod(JoinPoint point) {
         MethodSignature signature = (MethodSignature) point.getSignature();
         Method method = signature.getMethod();
-        Object obj = null;
-        obj = method.getAnnotation(Select.class);
-        if (obj != null) {
-            return true;
-        }
-        obj = method.getAnnotation(SelectProvider.class);
-        if (obj != null) {
+        if (method.getAnnotation(Select.class) != null || method.getAnnotation(SelectProvider.class) != null) {
             return true;
         }
         return false;
